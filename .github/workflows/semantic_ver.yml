@@ -127,7 +127,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.determine_version.outputs.new_version }}
-          release_name: Release ${{ steps.determine_version.outputs.new_version }}
-          body: "Automated release for ${{ steps.determine_version.outputs.new_version }}"
-          prerelease: ${{ steps.determine_version.outputs.prerelease }}
+          tag_name: ${{ env.NEW_VERSION }}
+          release_name: Release ${{ env.NEW_VERSION }}
+          body: "Automated release for ${{ env.NEW_VERSION }}"
+          prerelease: ${{ env.PRERELEASE }}
