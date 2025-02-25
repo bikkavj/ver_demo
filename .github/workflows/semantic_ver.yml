@@ -118,7 +118,7 @@ jobs:
           echo "GIT Authentication configured"
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git remote set-url origin https://x-access-token:${GIT_TOKEN}@github.com/ver_demo.git
+          git remote set-url origin https://x-access-token:${GIT_TOKEN}@github.com/bikkavj/ver_demo.git
           git tag $NEW_VERSION
           git push origin $NEW_VERSION
 
