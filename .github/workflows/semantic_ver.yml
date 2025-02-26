@@ -2,60 +2,28 @@ name: Semantic Versioning
 
 on:
   pull_request:
+    types:
+      - closed
     branches:
       - staging
       - prod
-    types:
-      - closed
 
 jobs:
   versioning:
-    # Ensures workflow runs only when PR is merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Ensures full commit history for versioning
-
-      - name: Get PR Labels
-        id: get_labels
-        run: |
-          PR_LABELS=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r 'map(.name) | join(",") // "none"')
-          echo "Extracted PR Labels:: $PR_LABELS"
-          echo "PR_LABELS=$PR_LABELS" >> $GITHUB_ENV
-
-      - name: Debug GitHub Event
-        run: echo '${{ toJson(github.event) }}' 
-
-
-      - name: Set Version Bump Type
-        id: bump_type
-        run: |
-          MAJOR_PATTERN="(breaking change)" # Default
-          MINOR_PATTERN="(feat)"
-
-          if [[ "$PR_LABELS" =~ "major" ]]; then
-            MAJOR_PATTERN=".*" # Match everything, forcing a major bump
-            echo "Detected 'major' label → Forcing Major Version Increment"
-          elif [[ "$PR_LABELS" =~ "minor" ]]; then
-            MINOR_PATTERN=".*" # Match everything, forcing a minor bump
-            echo "Detected 'minor' label → Forcing Minor Version Increment"
-          else
-            echo "No major/minor labels detected → Defaulting to patch bump"
-          fi
-
-          echo "Using Major Pattern: $MAJOR_PATTERN"
-          echo "Using Minor Pattern: $MINOR_PATTERN"
-
-          echo "MAJOR_PATTERN=$MAJOR_PATTERN" >> $GITHUB_ENV
-          echo "MINOR_PATTERN=$MINOR_PATTERN" >> $GITHUB_ENV
+          fetch-depth: 0  # Ensures full commit history for versioning
 
       - name: Prevent Direct Merging to Prod (Only Allowed from Staging or Hotfix)
         run: |
-          base_branch="${{ github.base_ref }}"
-          head_branch="${{ github.head_ref }}"
+          base_branch="${{ github.event.pull_request.base.ref }}"
+          head_branch="${{ github.event.pull_request.head.ref }}"
           echo "Base Branch: $base_branch"
           echo "Head Branch: $head_branch"
 
@@ -68,95 +36,99 @@ jobs:
             echo "Error: Only develop or bugfix (bug/*) branches can be merged into staging!"
             exit 1
           fi
-      - name: Debug Versioning Inputs
-        run: |
-          echo "MAJOR_PATTERN=${{ env.MAJOR_PATTERN }}"
-          echo "MINOR_PATTERN=${{ env.MINOR_PATTERN }}"
-          echo "Current Git Tags:"
-          git tag --list --sort=-v:refname
 
       - name: Get Semantic Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "v"
-          major_pattern: "${{ env.MAJOR_PATTERN }}"
-          minor_pattern: "${{ env.MINOR_PATTERN }}"
-          version_format: "v${major}.${minor}.${patch}"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
+          version_format: "v${major}.${minor}.${patch}-rc${increment}"
           bump_each_commit: false
-          search_commit_body: false
+          search_commit_body: true
           enable_prerelease_mode: true
-          debug: true # Enables logging
 
       - name: Determine Version Type
-        id: determine_version
         run: |
-          set -e # Exit if any command fails
-          branch=${{ github.base_ref }}
-          head_branch=${{ github.head_ref }}
+          set -e  # Exit if any command fails
+          base_branch="${{ github.event.pull_request.base.ref }}"
+          pr_title="${{ github.event.pull_request.title }}"
+          pr_body="${{ github.event.pull_request.body }}"
           new_version="${{ steps.versioning.outputs.version }}"
-          echo "Branch: $branch"
+
+          echo "Base Branch: $base_branch"
           echo "Base Version: $new_version"
-          
-          # Default prerelease flag
+          echo "PR_TITLE: $pr_title"
+          echo "PR_BODY: $pr_body"
+
           prerelease="false"
 
-          if [[ -z "$new_version" ]]; then
-            echo "Error: new_version is empty"
-            exit 1
+          if [[ "$base_branch" == "staging" ]]; then
+              # Get the latest RC version if it exists
+              latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
+              
+              if [[ -n "$latest_rc_tag" ]]; then
+                  # If an RC exists, extract current RC number and increment
+                  current_rc_number=$(echo "$latest_rc_tag" | grep -oP '(?<=-rc)\d+' || echo "0")
+                  rc_number=$((current_rc_number + 1))
+                  
+                  # Update the new version with incremented RC number
+                  new_version=$(echo "$latest_rc_tag" | sed -E "s/-rc[0-9]+/-rc$rc_number/")
+              else
+                  # No RC exists, start from latest stable version
+                  latest_stable_tag=$(git tag --list "v*" | sort -V | tail -n 1)
+                  
+                  if [[ -z "$latest_stable_tag" ]]; then
+                      # No tags exist, start fresh
+                      new_version="v1.0.0-rc.1"
+                  else
+                      # Use latest stable version and append `-rc.1`
+                      new_version="$latest_stable_tag-rc.1"
+                  fi
+              fi
+
+              prerelease="true"
           fi
 
-          if [[ "$branch" == "staging" ]]; then
-            echo "Generating RC version..."
-            # Count existing RC versions
-            existing_rc_versions=$(git tag --list "$new_version-rc.*" | grep -E "$new_version-rc.[0-9]+" || true)
+          if [[ "$base_branch" == "prod" ]]; then
+            latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
 
-            if [[ -z "$existing_rc_versions" ]]; then
-              rc_number=1 # First RC version
+            if [[ -n "$latest_rc_tag" ]]; then
+              new_version="${latest_rc_tag%-rc.*}"
+            fi
+
+            last_version=$(git tag --list "v*" | sort -V | tail -n 1)
+            major=$(echo "$last_version" | cut -d. -f1 | tr -d 'v')
+            minor=$(echo "$last_version" | cut -d. -f2)
+            patch=$(echo "$last_version" | cut -d. -f3)
+
+            if echo "$pr_title" | grep -q "(MAJOR)" || echo "$pr_body" | grep -q "(MAJOR)"; then
+              major=$((major + 1))
+              minor=0
+              patch=0
+            elif echo "$pr_title" | grep -q "(MINOR)" || echo "$pr_body" | grep -q "(MINOR)"; then
+              minor=$((minor + 1))
+              patch=0
             else
-              rc_number=$(echo "$existing_rc_versions" | wc -l)
-              rc_number=$((rc_number + 1)) # Increment RC version number
+              patch=$((patch + 1))
             fi
 
-            new_version="$new_version-rc.$rc_number"
-            prerelease=true
-            echo "New RC Version: $new_version"
-
-          elif [[ "$branch" == "prod" ]]; then
-            echo "Finalizing stable production release..."
-            
-            if [[ "$head_branch" == "staging" ]]; then
-              latest_rc_tag=$(git tag --list "$new_version-rc.*" | sort -V | tail -n 1)
-              if [[ -n "$latest_rc_tag" ]]; then
-                new_version="${latest_rc_tag%-rc.*}" # Remove "-rc.N" to finalize version
-              fi
-              echo "Final Production version (from staging): $new_version"
-
-            elif [[ "$head_branch" =~ ^hot/ ]]; then
-              latest_version=$(git tag --list "v*" | sort -V | tail -n 1)
-              if [[ -n "$latest_version" ]]; then
-                major=$(echo "$latest_version" | cut -d. -f1 | tr -d 'v')
-                minor=$(echo "$latest_version" | cut -d. -f2)
-                patch=$(echo "$latest_version" | cut -d. -f3)
-                patch=$((patch + 1)) # Increment Patch
-                new_version="v$major.$minor.$patch"
-              else
-                new_version="v1.0.1"
-              fi
-              echo "Final Production Version (from Hotfix): $new_version"
-            fi
+            new_version="v$major.$minor.$patch"
+            prerelease="false"
           fi
 
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
-          echo "Final Version: $new_version"
+
+      - name: Debug Version
+        run: |
+          echo "NEW_VERSION=${{ env.NEW_VERSION }}"
 
       - name: Push New Tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # git config --global url."https://${{ secrets.GIT_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          # echo "GIT Authentication configured"
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/bikkavj/ver_demo.git
