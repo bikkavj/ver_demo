@@ -177,7 +177,7 @@ jobs:
       - name: Save Changelog to File
          run: |
           echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n## Uncategorized\n" > release_filter_notes.md
-          echo "${{ steps.build_changelog.outputs.changelog }}" | sed '/^[[:space:]]*$/d' | awk '/^- /{p=$0; getline; print p "\n" $0}' | tail -n 2 >> release_filter_notes.md
+          echo "${{ steps.build_changelog.outputs.changelog }}" | sed '/^[[:space:]]*$/d' | tail -n 2 >> release_filter_notes.md
 
       - name: Debug Filtered Changelog
         run: |
