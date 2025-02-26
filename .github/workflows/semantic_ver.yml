@@ -69,7 +69,8 @@ jobs:
               git fetch --tags  # Ensure all tags are fetched
 
               # Get the latest stable version (excluding RC versions)
-              latest_stable_tag=$(git tag -l --sort=-v:refname "v*" | grep -v "-rc" | head -n 1)
+              latest_stable_tag=$(git tag --list "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -rV | head -n 1)
+              echo "latest_stable_version: $latest_stable_tag"
 
               if [[ -z "$latest_stable_tag" ]]; then
                   # No previous stable versions, start fresh
