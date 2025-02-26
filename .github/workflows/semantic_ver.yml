@@ -22,8 +22,8 @@ jobs:
       - name: Get PR Labels
         id: get_labels
         run: |
-          PR_LABELS=$(jq -r 'if .pull_request.labels then [.pull_request.labels[].name] | join(",") else "none" end' <<< '${{ toJson(github.event.pull_request) }}')
-          echo "PR Labels: $PR_LABELS"
+          PR_LABELS=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r 'map(.name) | join(",") // "none"')
+          echo "Extracted PR Labels:: $PR_LABELS"
           echo "PR_LABELS=$PR_LABELS" >> $GITHUB_ENV
 
       - name: Debug GitHub Event
@@ -33,8 +33,8 @@ jobs:
       - name: Set Version Bump Type
         id: bump_type
         run: |
-          MAJOR_PATTERN="(MAJOR)" # Default
-          MINOR_PATTERN="(MINOR)"
+          MAJOR_PATTERN="(breaking change)" # Default
+          MINOR_PATTERN="(feat)"
 
           if [[ "$PR_LABELS" =~ "major" ]]; then
             MAJOR_PATTERN=".*" # Match everything, forcing a major bump
