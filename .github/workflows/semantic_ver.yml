@@ -129,3 +129,5 @@ jobs:
           release_name: Release ${{ env.NEW_VERSION }}
           body: "Automated release for ${{ env.NEW_VERSION }}"
           prerelease: ${{ env.PRERELEASE }}
+
+          #Checking develop minor
