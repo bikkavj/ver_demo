@@ -55,6 +55,10 @@ jobs:
           echo "PR_BODY: $pr_body"
 
           prerelease="false"
+          latest_tag=$(git tag --list "v*" | sort -V | tail -n 1)
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+          echo "Latest Tag: $latest_tag"
+
 
           if [[ "$base_branch" == "staging" ]]; then
               echo "Generating RC version..."
@@ -119,6 +123,7 @@ jobs:
           fi
 
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
+          echo "New Version: $new_version"
           echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
 
       - name: Debug Version
@@ -136,15 +141,30 @@ jobs:
           git tag ${{ env.NEW_VERSION }}
           git push origin ${{ env.NEW_VERSION }}
 
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ env.NEW_VERSION }}
+          LATEST_TAG: ${{ env.LATEST_TAG }}
+        with:
+          fromTag: ${{ env.LATEST_TAG }}
+          toTag: ${{ env.NEW_VERSION }}
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ env.NEW_VERSION }}
           PRERELEASE: ${{ env.PRERELEASE }}
+          CHANGELOG: ${{ env.CHANGELOG }}
         with:
           tag_name: ${{ env.NEW_VERSION }}
           release_name: Release ${{ env.NEW_VERSION }}
-          body: "Automated release for ${{ env.NEW_VERSION }}"
+          body: |
+            Automated release for ${{ env.NEW_VERSION }}
+            ## Changelog
+            ${{ steps.build_changelog.outputs.changelog }}
           prerelease: ${{ env.PRERELEASE }}
 
