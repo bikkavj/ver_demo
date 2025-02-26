@@ -162,7 +162,6 @@ jobs:
           echo "Previous Tag: $previous_tag"
 
 
-
       - name: "Build Changelog"
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v5
