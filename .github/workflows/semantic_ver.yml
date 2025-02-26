@@ -141,19 +141,35 @@ jobs:
           git push origin ${{ env.NEW_VERSION }}
 
       - name: Fetch Latest Pre-release or Stable Tag
+        env:
+            NEW_VERSION: ${{ env.NEW_VERSION }}
         run: |
           git fetch --tags
+
+          # Get latest stable version (excluding RCs)
           latest_stable_tag=$(git tag --list "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n 1)
+
+          # Get all RC versions sorted
           latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
 
-          if [[ -n "$latest_rc_tag" ]]; then
-            previous_tag="$latest_rc_tag"
+          # Determine the correct previous tag
+          if [[ "${{ env.NEW_VERSION }}" == *"-rc."* ]]; then
+            # If the new version is an RC, check if there is a previous RC
+            previous_rc=$(git tag --list "${{ env.NEW_VERSION%-rc.* }}-rc.*" | sort -V | tail -n 2 | head -n 1)
+
+            if [[ -n "$previous_rc" ]]; then
+              previous_tag="$previous_rc"  # Compare with previous RC
+            else
+              previous_tag="$latest_stable_tag"  # No previous RC, compare with stable
+            fi
           else
-            previous_tag="$latest_stable_tag"
+            # If the new version is a final release, compare with the latest RC
+            previous_tag="$latest_rc_tag"
           fi
 
           echo "PREVIOUS_TAG=$previous_tag" >> $GITHUB_ENV
           echo "Previous Tag: $previous_tag"
+
 
       - name: "Build Changelog"
         id: build_changelog
