@@ -37,6 +37,12 @@ jobs:
             exit 1
           fi
 
+      - name: Fetch Latest Tags
+        run: |
+          git fetch --tags --force
+          git tag --list --sort=-v:refname  # Debugging: Show all tags sorted by version
+
+
       - name: Get Semantic Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
