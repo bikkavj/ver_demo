@@ -89,7 +89,6 @@ jobs:
                       new_version="${latest_stable_tag}-rc.1"
                   fi
               fi
-
               prerelease="true"
               echo "New RC Version: $new_version"
           fi
