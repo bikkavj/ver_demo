@@ -57,6 +57,7 @@ jobs:
           prerelease="false"
           latest_tag=$(git tag --list "v*" | sort -V | tail -n 1)
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+          echo "Latest Tag: $latest_tag"
 
 
           if [[ "$base_branch" == "staging" ]]; then
@@ -122,19 +123,8 @@ jobs:
           fi
 
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
+          echo "New Version: $new_version"
           echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
-
-      - name: "Build Changelog"
-        id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@v5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_VERSION: ${{ env.NEW_VERSION }}
-          LATEST_TAG: ${{ env.LATEST_TAG }}
-        with:
-          fromTag: ${{ env.LATEST_TAG }}
-          toTag: ${{ env.NEW_VERSION }}
-        
 
       - name: Debug Version
         run: |
@@ -150,6 +140,17 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/bikkavj/ver_demo.git
           git tag ${{ env.NEW_VERSION }}
           git push origin ${{ env.NEW_VERSION }}
+
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ env.NEW_VERSION }}
+          LATEST_TAG: ${{ env.LATEST_TAG }}
+        with:
+          fromTag: ${{ env.LATEST_TAG }}
+          toTag: ${{ env.NEW_VERSION }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
