@@ -137,9 +137,12 @@ jobs:
           echo "Changelog:"
           cat changelog.txt
 
-          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-          cat changelog.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          {
+            echo "CHANGELOG<<EOF"
+            cat changelog.txt
+            echo "EOF"
+          } >> $GITHUB_ENV
+
 
       - name: Debug Version
         run: |
@@ -169,6 +172,6 @@ jobs:
           body: |
             Automated release for ${{ env.NEW_VERSION }}
             ## Changelog
-            ${{ env.CHANGELOG }}
+            $(echo "${{ env.CHANGELOG }}" | tr '\n' ' ')
           prerelease: ${{ env.PRERELEASE }}
 
