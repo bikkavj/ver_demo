@@ -26,12 +26,10 @@ jobs:
           head_branch="${{ github.event.pull_request.head.ref }}"
           echo "Base Branch: $base_branch"
           echo "Head Branch: $head_branch"
-
           if [[ "$base_branch" == "prod" && "$head_branch" != "staging" && ! "$head_branch" =~ ^hot/ ]]; then
             echo "Error: Only staging or hotfix (hot/*) branches can be merged into prod!"
             exit 1
           fi
-
           if [[ "$base_branch" == "staging" && "$head_branch" != "develop" && ! "$head_branch" =~ ^bug/ ]]; then
             echo "Error: Only develop or bugfix (bug/*) branches can be merged into staging!"
             exit 1
@@ -49,7 +47,6 @@ jobs:
           pr_title="${{ github.event.pull_request.title }}"
           pr_body="${{ github.event.pull_request.body }}"
           #new_version="${{ steps.versioning.outputs.version }}"
-
           echo "Base Branch: $base_branch"
           echo "PR_TITLE: $pr_title"
           echo "PR_BODY: $pr_body"
@@ -58,7 +55,6 @@ jobs:
           latest_tag=$(git tag --list "v*" | sort -V | tail -n 1)
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
           echo "Latest Tag: $latest_tag"
-
 
           if [[ "$base_branch" == "staging" ]]; then
               echo "Generating RC version..."
@@ -125,10 +121,6 @@ jobs:
           echo "New Version: $new_version"
           echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
 
-      - name: Debug Version
-        run: |
-          echo "NEW_VERSION=${{ env.NEW_VERSION }}"
-
       - name: Push New Tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -143,19 +135,15 @@ jobs:
       - name: Fetch Latest Pre-release or Stable Tag
         run: |
           git fetch --tags
-
           # Get the two latest tags
           tags=$(git tag --list "v*" | sort -V | tail -n 2)
-
           # Assign the latest and previous versions
           new_version=$(echo "$tags" | tail -n 1)
           previous_tag=$(echo "$tags" | head -n 1)
-
           if [[ "$previous_tag" == "$new_version" ]]; then
             echo "Only one tag found, setting previous_tag to empty."
             previous_tag=""
           fi
-
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "PREVIOUS_TAG=$previous_tag" >> $GITHUB_ENV
           echo "New Version: $new_version"
