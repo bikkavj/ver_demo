@@ -181,6 +181,7 @@ jobs:
         with:
           fromTag: ${{ env.PREVIOUS_TAG }}
           toTag: ${{ env.NEW_VERSION }}
+          fetchViaCommits: true
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
