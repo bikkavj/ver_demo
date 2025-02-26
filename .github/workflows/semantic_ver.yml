@@ -141,8 +141,6 @@ jobs:
           git push origin ${{ env.NEW_VERSION }}
 
       - name: Fetch Latest Pre-release or Stable Tag
-        env:
-            NEW_VERSION: ${{ env.NEW_VERSION }}
         run: |
           git fetch --tags
 
@@ -152,10 +150,13 @@ jobs:
           # Get all RC versions sorted
           latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
 
+          # Extract base version (remove RC part)
+          base_version=$(echo "${{ env.NEW_VERSION }}" | sed -E 's/-rc\.[0-9]+//')
+
           # Determine the correct previous tag
           if [[ "${{ env.NEW_VERSION }}" == *"-rc."* ]]; then
-            # If the new version is an RC, check if there is a previous RC
-            previous_rc=$(git tag --list "${{ env.NEW_VERSION%-rc.* }}-rc.*" | sort -V | tail -n 2 | head -n 1)
+            # If the new version is an RC, check for previous RCs
+            previous_rc=$(git tag --list "${base_version}-rc.*" | sort -V | tail -n 2 | head -n 1)
 
             if [[ -n "$previous_rc" ]]; then
               previous_tag="$previous_rc"  # Compare with previous RC
@@ -169,7 +170,6 @@ jobs:
 
           echo "PREVIOUS_TAG=$previous_tag" >> $GITHUB_ENV
           echo "Previous Tag: $previous_tag"
-
 
       - name: "Build Changelog"
         id: build_changelog
