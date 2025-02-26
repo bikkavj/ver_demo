@@ -140,15 +140,30 @@ jobs:
           git tag ${{ env.NEW_VERSION }}
           git push origin ${{ env.NEW_VERSION }}
 
+      - name: Fetch Latest Pre-release or Stable Tag
+        run: |
+          git fetch --tags
+          latest_stable_tag=$(git tag --list "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n 1)
+          latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
+
+          if [[ -n "$latest_rc_tag" ]]; then
+            previous_tag="$latest_rc_tag"
+          else
+            previous_tag="$latest_stable_tag"
+          fi
+
+          echo "PREVIOUS_TAG=$previous_tag" >> $GITHUB_ENV
+          echo "Previous Tag: $previous_tag"
+
       - name: "Build Changelog"
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ env.NEW_VERSION }}
-          LATEST_TAG: ${{ env.LATEST_TAG }}
+          PREVIOUS_TAG: ${{ env.PREVIOUS_TAG }}
         with:
-          fromTag: ${{ env.LATEST_TAG }}
+          fromTag: ${{ env.PREVIOUS_TAG }}
           toTag: ${{ env.NEW_VERSION }}
 
       - name: Create GitHub Release
