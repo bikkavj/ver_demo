@@ -144,18 +144,18 @@ jobs:
         run: |
           git fetch --tags
 
-          # Get latest stable version (excluding RCs)
+          # Get the latest stable version (excluding RCs)
           latest_stable_tag=$(git tag --list "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n 1)
 
-          # Get all RC versions sorted
+          # Get the latest RC version (sorted)
           latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
 
-          # Extract base version (remove RC part)
+          # Extract base version (remove RC suffix)
           base_version=$(echo "${{ env.NEW_VERSION }}" | sed -E 's/-rc\.[0-9]+//')
 
           # Determine the correct previous tag
           if [[ "${{ env.NEW_VERSION }}" == *"-rc."* ]]; then
-            # If the new version is an RC, check for previous RCs
+            # If the new version is an RC, check for previous RC versions of the same base version
             previous_rc=$(git tag --list "${base_version}-rc.*" | sort -V | tail -n 2 | head -n 1)
 
             if [[ -n "$previous_rc" ]]; then
@@ -164,12 +164,18 @@ jobs:
               previous_tag="$latest_stable_tag"  # No previous RC, compare with stable
             fi
           else
-            # If the new version is a final release, compare with the latest RC
-            previous_tag="$latest_rc_tag"
+            # If the new version is a final release, compare with the latest RC of the same base version
+            previous_tag=$(git tag --list "${base_version}-rc.*" | sort -V | tail -n 1)
+            
+            # Fallback: If no RC exists, compare with the latest stable
+            if [[ -z "$previous_tag" ]]; then
+              previous_tag="$latest_stable_tag"
+            fi
           fi
 
           echo "PREVIOUS_TAG=$previous_tag" >> $GITHUB_ENV
           echo "Previous Tag: $previous_tag"
+
 
       - name: "Build Changelog"
         id: build_changelog
@@ -181,6 +187,7 @@ jobs:
         with:
           fromTag: ${{ env.PREVIOUS_TAG }}
           toTag: ${{ env.NEW_VERSION }}
+          fetchViaCommits: true
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
