@@ -186,12 +186,12 @@ jobs:
 
       - name: Extract Latest PR from Changelog
         run: |
-          # Store the generated changelog
+          # Store the generated changelog safely
           changelog="${{ steps.build_changelog.outputs.changelog }}"
 
-          # Ensure the changelog is not empty
-          if [[ -z "$changelog" ]]; then
-            echo "No changelog found. Skipping..."
+          # Check if the changelog contains actual data
+          if [[ -z "$changelog" || "$changelog" == *"{{CHANGELOG}}"* ]]; then
+            echo "No changelog found or changelog is empty. Skipping..."
             exit 0
           fi
 
@@ -199,12 +199,13 @@ jobs:
           echo "Full Changelog:"
           echo "$changelog"
 
-          # Extract the first PR entry (assuming PRs start with "- PR:")
+          # Reverse the changelog and extract the last PR entry
           last_pr=$(echo "$changelog" | tac | grep -m 1 "^- PR:" || echo "No PR found")
 
           # If no PR is found, handle gracefully
-          if [[ -z "$last_pr" ]]; then
-            last_pr="No PR found in changelog."
+          if [[ "$last_pr" == "No PR found" ]]; then
+            echo "No valid PRs found. Skipping..."
+            exit 0
           fi
 
           # Write filtered changelog to a file
