@@ -70,6 +70,7 @@ jobs:
               else
                   # Find the latest RC version for this stable version
                   latest_rc_tag=$(git tag --list | grep -E "^${latest_stable_tag}-rc.[0-9]+" | sort -V | tail -n 1)
+                  echo "latest RC Version: $latest_rc_tag"
 
                   if [[ -n "$latest_rc_tag" ]]; then
                       # Extract the RC number using `sed` (cross-platform compatibility)
