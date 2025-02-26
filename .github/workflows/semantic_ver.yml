@@ -22,7 +22,7 @@ jobs:
       - name: Get PR Labels
         id: get_labels
         run: |
-          PR_LABELS=$(jq -r '.pull_request.labels | map(.name) | join(",") // "none"' <<< '${{ toJson(github.event.pull_request) }}')
+          PR_LABELS=$(jq -r 'if .pull_request.labels then [.pull_request.labels[].name] | join(",") else "none" end' <<< '${{ toJson(github.event.pull_request) }}')
           echo "PR Labels: $PR_LABELS"
           echo "PR_LABELS=$PR_LABELS" >> $GITHUB_ENV
 
