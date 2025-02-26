@@ -178,6 +178,11 @@ jobs:
         run: |
           echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n\n${{ steps.build_changelog.outputs.changelog }}" > release_notes.md
 
+      - name: Debug Filtered Changelog
+        run: |
+          echo "Filtered Changelog:"
+          cat release_notes.md
+
       - name: Create GitHub Release
         uses: actions/create-release@v1
         env:
