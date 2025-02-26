@@ -95,6 +95,7 @@ jobs:
             fi
 
             last_version=$(git tag --list "v*" | sort -V | tail -n 1)
+            echo "Latest Version: $last_version"
             major=$(echo "$last_version" | cut -d. -f1 | tr -d 'v')
             minor=$(echo "$last_version" | cut -d. -f2)
             patch=$(echo "$last_version" | cut -d. -f3)
@@ -111,6 +112,7 @@ jobs:
             fi
             new_version="v$major.$minor.$patch"
             prerelease="false"
+            echo "New stable Version: $new_version"
           fi
 
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
