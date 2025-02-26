@@ -121,6 +121,26 @@ jobs:
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
 
+      - name: Generate Changelog
+        run: |
+          latest_tag=$(git tag --list "v*" | sort -V | tail -n 1)
+          echo "Latest Tag: $latest_tag"
+
+          if [[ -z "$latest_tag" ]]; then
+            echo "No previous tag found. Listing all commits."
+            git log --pretty=format:"- %s (%h) by %an" > changelog.txt
+          else
+            echo "Generating changelog from $latest_tag..."
+            git log "$latest_tag"..HEAD --pretty=format:"- %s (%h) by %an" > changelog.txt
+          fi
+
+          echo "Changelog:"
+          cat changelog.txt
+
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          cat changelog.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Debug Version
         run: |
           echo "NEW_VERSION=${{ env.NEW_VERSION }}"
@@ -142,9 +162,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ env.NEW_VERSION }}
           PRERELEASE: ${{ env.PRERELEASE }}
+          CHANGELOG: ${{ env.CHANGELOG }}
         with:
           tag_name: ${{ env.NEW_VERSION }}
           release_name: Release ${{ env.NEW_VERSION }}
-          body: "Automated release for ${{ env.NEW_VERSION }}"
+          body: |
+            Automated release for ${{ env.NEW_VERSION }}
+            ## Changelog
+            ${{ env.CHANGELOG }}
           prerelease: ${{ env.PRERELEASE }}
 
