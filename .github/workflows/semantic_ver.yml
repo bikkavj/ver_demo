@@ -65,16 +65,30 @@ jobs:
           prerelease="false"
 
           if [[ "$base_branch" == "staging" ]]; then
-            latest_rc_tag=$(git tag --list "$new_version-rc.*" | sort -V | tail -n 1)
+              # Get the latest RC version if it exists
+              latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
+              
+              if [[ -n "$latest_rc_tag" ]]; then
+                  # If an RC exists, extract current RC number and increment
+                  current_rc_number=$(echo "$latest_rc_tag" | grep -oP '(?<=-rc)\d+' || echo "0")
+                  rc_number=$((current_rc_number + 1))
+                  
+                  # Update the new version with incremented RC number
+                  new_version=$(echo "$latest_rc_tag" | sed -E "s/-rc[0-9]+/-rc$rc_number/")
+              else
+                  # No RC exists, start from latest stable version
+                  latest_stable_tag=$(git tag --list "v*" | sort -V | tail -n 1)
+                  
+                  if [[ -z "$latest_stable_tag" ]]; then
+                      # No tags exist, start fresh
+                      new_version="v1.0.0-rc.1"
+                  else
+                      # Use latest stable version and append `-rc.1`
+                      new_version="$latest_stable_tag-rc.1"
+                  fi
+              fi
 
-            if [[ -z "$latest_rc_tag" ]]; then
-              rc_number=1
-            else
-              rc_number=$(echo "$latest_rc_tag" | grep -o '[0-9]*$')
-              rc_number=$((rc_number + 1))
-            fi
-            new_version="$new_version-rc.$rc_number"
-            prerelease="true"
+              prerelease="true"
           fi
 
           if [[ "$base_branch" == "prod" ]]; then
