@@ -173,18 +173,10 @@ jobs:
           fromTag: ${{ env.PREVIOUS_TAG }}
           toTag: ${{ env.NEW_VERSION }}
           fetchViaCommits: true
-          
-      - name: Filter Only Last PR in Changelog
+
+      - name: Save Changelog to File
         run: |
-          # Read generated changelog
-          changelog=$(cat ${{ steps.build_changelog.outputs.changelog }})
-
-          # Extract the first PR entry (assuming standard format)
-          last_pr=$(echo "$changelog" | grep -m 1 "- PR:")
-
-          # Overwrite changelog with only the last PR
-          echo -e "## Changelog\n\n$last_pr" > filtered_changelog.md
-          echo "CHANGELOG=$(cat filtered_changelog.md)" >> $GITHUB_ENV
+          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n\n${{ steps.build_changelog.outputs.changelog }}" > release_notes.md
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -196,9 +188,6 @@ jobs:
         with:
           tag_name: ${{ env.NEW_VERSION }}
           release_name: Release ${{ env.NEW_VERSION }}
-          body: |
-            Automated release for ${{ env.NEW_VERSION }}
-            ## Changelog
-            ${{ steps.build_changelog.outputs.changelog }}
+          body_path: release_notes.md
           prerelease: ${{ env.PRERELEASE }}
 
