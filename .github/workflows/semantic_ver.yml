@@ -18,7 +18,26 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Ensures full commit history for versioning
+
+      - name: Prevent Direct Merging to Prod (Only Allowed from Staging or Hotfix)
+        run: |
+          base_branch="${{ github.event.pull_request.base.ref }}"
+          head_branch="${{ github.event.pull_request.head.ref }}"
+          echo "Base Branch: $base_branch"
+          echo "Head Branch: $head_branch"
+
+          if [[ "$base_branch" == "prod" && "$head_branch" != "staging" && ! "$head_branch" =~ ^hot/ ]]; then
+            echo "Error: Only staging or hotfix (hot/*) branches can be merged into prod!"
+            exit 1
+          fi
+
+          if [[ "$base_branch" == "staging" && "$head_branch" != "develop" && ! "$head_branch" =~ ^bug/ ]]; then
+            echo "Error: Only develop or bugfix (bug/*) branches can be merged into staging!"
+            exit 1
+          fi
+
+          echo "✅ Merge validation passed!"
 
       - name: Get Semantic Version
         id: versioning
@@ -34,7 +53,7 @@ jobs:
 
       - name: Determine Version Type
         run: |
-          set -e
+          set -e  # Exit if any command fails
           base_branch="${{ github.event.pull_request.base.ref }}"
           pr_title="${{ github.event.pull_request.title }}"
           pr_body="${{ github.event.pull_request.body }}"
