@@ -39,7 +39,9 @@ jobs:
 
       - name: Fetch Latest Tags
         run: |
-          git fetch --tags --force
+          git fetch --prune --unshallow  # Ensure full commit history
+          git tag -d $(git tag -l) || true  # Delete local tags (prevent cache issues)
+          git fetch --tags --force  # Fetch latest tags from remote
           git tag --list --sort=-v:refname  # Debugging: Show all tags sorted by version
 
 
