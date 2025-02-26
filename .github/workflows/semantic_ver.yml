@@ -68,6 +68,12 @@ jobs:
             echo "Error: Only develop or bugfix (bug/*) branches can be merged into staging!"
             exit 1
           fi
+      - name: Debug Versioning Inputs
+        run: |
+          echo "MAJOR_PATTERN=${{ env.MAJOR_PATTERN }}"
+          echo "MINOR_PATTERN=${{ env.MINOR_PATTERN }}"
+          echo "Current Git Tags:"
+          git tag --list --sort=-v:refname
 
       - name: Get Semantic Version
         id: versioning
@@ -77,7 +83,7 @@ jobs:
           major_pattern: "${{ env.MAJOR_PATTERN }}"
           minor_pattern: "${{ env.MINOR_PATTERN }}"
           version_format: "v${major}.${minor}.${patch}"
-          bump_each_commit: true
+          bump_each_commit: false
           search_commit_body: false
           enable_prerelease_mode: true
           debug: true # Enables logging
