@@ -144,36 +144,21 @@ jobs:
         run: |
           git fetch --tags
 
-          # Get the latest stable version (excluding RCs)
-          latest_stable_tag=$(git tag --list "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n 2 | head -n 1)
+          # Get the two latest tags
+          tags=$(git tag --list "v*" | sort -V | tail -n 2)
 
-          # Get the latest RC version (sorted)
-          latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
+          # Assign the latest and previous versions
+          new_version=$(echo "$tags" | tail -n 1)
+          previous_tag=$(echo "$tags" | head -n 1)
 
-          # Extract base version (remove RC suffix)
-          base_version=$(echo "${{ env.NEW_VERSION }}" | sed -E 's/-rc\.[0-9]+//')
-
-          # Determine the correct previous tag
-          if [[ "${{ env.NEW_VERSION }}" == *"-rc."* ]]; then
-            # If the new version is an RC, check for previous RCs of the same base version
-            previous_rc=$(git tag --list "${base_version}-rc.*" | sort -V | tail -n 2 | head -n 1)
-
-            if [[ -n "$previous_rc" ]]; then
-              previous_tag="$previous_rc"  # Compare with previous RC
-            else
-              previous_tag="$latest_stable_tag"  # No previous RC, compare with stable
-            fi
-          else
-            # If the new version is a final release, compare with the latest RC of the same base version
-            previous_tag=$(git tag --list "${base_version}-rc.*" | sort -V | tail -n 1)
-            
-            # Fallback: If no RC exists, compare with the previous stable version
-            if [[ -z "$previous_tag" ]]; then
-              previous_tag="$latest_stable_tag"
-            fi
+          if [[ "$previous_tag" == "$new_version" ]]; then
+            echo "Only one tag found, setting previous_tag to empty."
+            previous_tag=""
           fi
 
+          echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "PREVIOUS_TAG=$previous_tag" >> $GITHUB_ENV
+          echo "New Version: $new_version"
           echo "Previous Tag: $previous_tag"
 
 
