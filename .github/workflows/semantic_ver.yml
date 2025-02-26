@@ -18,7 +18,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Ensures full commit history for versioning
+          fetch-depth: 0  # Ensures full commit history for versioning
 
       - name: Prevent Direct Merging to Prod (Only Allowed from Staging or Hotfix)
         run: |
@@ -48,31 +48,23 @@ jobs:
           bump_each_commit: false
           search_commit_body: true
           enable_prerelease_mode: true
-          debug: true # Enables logging
 
       - name: Determine Version Type
-        id: determine_version
         run: |
-          set -e # Exit if any command fails
+          set -e  # Exit if any command fails
           base_branch="${{ github.event.pull_request.base.ref }}"
-          head_branch="${{ github.event.pull_request.head.ref }}"
           pr_title="${{ github.event.pull_request.title }}"
           pr_body="${{ github.event.pull_request.body }}"
           new_version="${{ steps.versioning.outputs.version }}"
-          echo "Branch: $branch"
+
+          echo "Base Branch: $base_branch"
           echo "Base Version: $new_version"
           echo "PR_TITLE: $pr_title"
           echo "PR_BODY: $pr_body"
-          
-          # Default prerelease flag
+
           prerelease="false"
 
-          if [[ -z "$new_version" ]]; then
-            echo "Error: new_version is empty"
-            exit 1
-          fi
-
-          if [[ "$branch" == "staging" ]]; then
+          if [[ "$base_branch" == "staging" ]]; then
             latest_rc_tag=$(git tag --list "$new_version-rc.*" | sort -V | tail -n 1)
 
             if [[ -z "$latest_rc_tag" ]]; then
@@ -82,17 +74,16 @@ jobs:
               rc_number=$((rc_number + 1))
             fi
             new_version="$new_version-rc.$rc_number"
-            echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
-            echo "PRERELEASE=true" >> $GITHUB_ENV
+            prerelease="true"
           fi
 
-          if [[ "$branch" == "prod" ]]; then
-            latest_rc_tag=$(git tag --list "$new_version-rc.*" | sort -V | tail -n 1)
+          if [[ "$base_branch" == "prod" ]]; then
+            latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
 
             if [[ -n "$latest_rc_tag" ]]; then
-              new_version="${latest_rc_tag%-rc.*}"  # Strip off `-rc.N`
+              new_version="${latest_rc_tag%-rc.*}"
             fi
-            # Check if a major or minor bump is needed
+
             last_version=$(git tag --list "v*" | sort -V | tail -n 1)
             major=$(echo "$last_version" | cut -d. -f1 | tr -d 'v')
             minor=$(echo "$last_version" | cut -d. -f2)
@@ -110,17 +101,20 @@ jobs:
             fi
 
             new_version="v$major.$minor.$patch"
-            echo "Final Production Version: $new_version"
-            echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
-            echo "PRERELEASE=false" >> $GITHUB_ENV
+            prerelease="false"
           fi
+
+          echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
+          echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
+
+      - name: Debug Version
+        run: |
+          echo "NEW_VERSION=${{ env.NEW_VERSION }}"
 
       - name: Push New Tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # git config --global url."https://${{ secrets.GIT_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          # echo "GIT Authentication configured"
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/bikkavj/ver_demo.git
