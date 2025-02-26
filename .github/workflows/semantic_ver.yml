@@ -161,7 +161,6 @@ jobs:
           echo "New Version: $new_version"
           echo "Previous Tag: $previous_tag"
 
-
       - name: "Build Changelog"
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v5
@@ -176,13 +175,14 @@ jobs:
 
       - name: Save Changelog to File
         run: |
-          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n\n${{ steps.build_changelog.outputs.changelog }}" > release_notes.md
-          echo "${{ steps.build_changelog.outputs.changelog }}" | sed '/^[[:space:]]*$/d' | awk '/^- /{p=$0; getline; print p "\n" $0}' | tail -n 2 >> release_notes.md
+          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n## Uncategorized\n" > release_filter_notes.md
+          echo "${{ steps.build_changelog.outputs.changelog }}" | sed '/^[[:space:]]*$/d' | tail -n 2 >> release_filter_notes.md
+
 
       - name: Debug Filtered Changelog
         run: |
           echo "Filtered Changelog:"
-          cat release_notes.md
+          cat release_filter_notes.md
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -194,6 +194,6 @@ jobs:
         with:
           tag_name: ${{ env.NEW_VERSION }}
           release_name: Release ${{ env.NEW_VERSION }}
-          body_path: release_notes.md
+          body_path: release_filter_notes.md
           prerelease: ${{ env.PRERELEASE }}
 
