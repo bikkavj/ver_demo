@@ -19,6 +19,39 @@ jobs:
         with:
           fetch-depth: 0 # Ensures full commit history for versioning
 
+      - name: Get PR Labels
+        id: get_labels
+        run: |
+          PR_LABELS=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r 'map(.name) | join(",") // "none"')
+          echo "Extracted PR Labels:: $PR_LABELS"
+          echo "PR_LABELS=$PR_LABELS" >> $GITHUB_ENV
+
+      - name: Debug GitHub Event
+        run: echo '${{ toJson(github.event) }}' 
+
+
+      - name: Set Version Bump Type
+        id: bump_type
+        run: |
+          MAJOR_PATTERN="(breaking change)" # Default
+          MINOR_PATTERN="(feat)"
+
+          if [[ "$PR_LABELS" =~ "major" ]]; then
+            MAJOR_PATTERN=".*" # Match everything, forcing a major bump
+            echo "Detected 'major' label → Forcing Major Version Increment"
+          elif [[ "$PR_LABELS" =~ "minor" ]]; then
+            MINOR_PATTERN=".*" # Match everything, forcing a minor bump
+            echo "Detected 'minor' label → Forcing Minor Version Increment"
+          else
+            echo "No major/minor labels detected → Defaulting to patch bump"
+          fi
+
+          echo "Using Major Pattern: $MAJOR_PATTERN"
+          echo "Using Minor Pattern: $MINOR_PATTERN"
+
+          echo "MAJOR_PATTERN=$MAJOR_PATTERN" >> $GITHUB_ENV
+          echo "MINOR_PATTERN=$MINOR_PATTERN" >> $GITHUB_ENV
+
       - name: Prevent Direct Merging to Prod (Only Allowed from Staging or Hotfix)
         run: |
           base_branch="${{ github.base_ref }}"
@@ -35,15 +68,25 @@ jobs:
             echo "Error: Only develop or bugfix (bug/*) branches can be merged into staging!"
             exit 1
           fi
+      - name: Debug Versioning Inputs
+        run: |
+          echo "MAJOR_PATTERN=${{ env.MAJOR_PATTERN }}"
+          echo "MINOR_PATTERN=${{ env.MINOR_PATTERN }}"
+          echo "Current Git Tags:"
+          git tag --list --sort=-v:refname
 
       - name: Get Semantic Version
         id: versioning
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "v"
-          major_pattern: "(?i)^breaking change"
-          minor_pattern: "(?i)^feat"
+          major_pattern: "${{ env.MAJOR_PATTERN }}"
+          minor_pattern: "${{ env.MINOR_PATTERN }}"
           version_format: "v${major}.${minor}.${patch}"
+          bump_each_commit: false
+          search_commit_body: false
+          enable_prerelease_mode: true
+          debug: true # Enables logging
 
       - name: Determine Version Type
         id: determine_version
@@ -130,4 +173,3 @@ jobs:
           body: "Automated release for ${{ env.NEW_VERSION }}"
           prerelease: ${{ env.PRERELEASE }}
 
-          #checking hot fix
