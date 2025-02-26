@@ -182,7 +182,7 @@ jobs:
       - name: Debug Filtered Changelog
         run: |
           echo "Filtered Changelog:"
-          cat release_notes.md
+          cat release_filter_notes.md
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
