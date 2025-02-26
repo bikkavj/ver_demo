@@ -55,6 +55,9 @@ jobs:
           echo "PR_BODY: $pr_body"
 
           prerelease="false"
+          latest_tag=$(git tag --list "v*" | sort -V | tail -n 1)
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+
 
           if [[ "$base_branch" == "staging" ]]; then
               echo "Generating RC version..."
@@ -121,26 +124,17 @@ jobs:
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
           echo "PRERELEASE=$prerelease" >> $GITHUB_ENV
 
-      - name: Generate Changelog
-        run: |
-          latest_tag=$(git tag --list "v*" | sort -V | tail -n 1)
-          echo "Latest Tag: $latest_tag"
-
-          if [[ -z "$latest_tag" ]]; then
-            echo "No previous tag found. Listing all commits."
-            git log --pretty=format:"- %s (%h) by %an" > changelog.txt
-          else
-            echo "Generating changelog from $latest_tag..."
-            git log "$latest_tag"..HEAD --pretty=format:"- %s (%h) by %an" > changelog.txt
-          fi
-
-          echo "Changelog:"
-          cat changelog.txt
-
-          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-          cat changelog.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
+      - name: "Build Changelog"
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ env.NEW_VERSION }}
+          LATEST_TAG: ${{ env.LATEST_TAG }}
+        with:
+          fromTag: ${{ env.LATEST_TAG }}
+          toTag: ${{ env.NEW_VERSION }}
+        
 
       - name: Debug Version
         run: |
@@ -170,6 +164,6 @@ jobs:
           body: |
             Automated release for ${{ env.NEW_VERSION }}
             ## Changelog
-            ${{ env.CHANGELOG }}
+            ${{ steps.build_changelog.outputs.changelog }}
           prerelease: ${{ env.PRERELEASE }}
 
