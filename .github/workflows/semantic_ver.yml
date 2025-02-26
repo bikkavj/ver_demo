@@ -66,6 +66,7 @@ jobs:
 
           if [[ "$base_branch" == "staging" ]]; then
               echo "Generating RC version..."
+              git fetch --tags  # Ensure all tags are fetched
 
               # Get the latest stable version (excluding RC versions)
               latest_stable_tag=$(git tag --list "v*" | grep -v "-rc" | sort -V | tail -n 1)
@@ -75,23 +76,22 @@ jobs:
                   new_version="v1.0.0-rc.1"
               else
                   # Find the latest RC version for this stable version
-                  latest_rc_tag=$(git tag --list "$latest_stable_tag-rc.*" | sort -V | tail -n 1)
+                  latest_rc_tag=$(git tag --list | grep -E "^${latest_stable_tag}-rc.[0-9]+" | sort -V | tail -n 1)
 
                   if [[ -n "$latest_rc_tag" ]]; then
-                      # Extract existing RC number and increment
-                      current_rc_number=$(echo "$latest_rc_tag" | grep -oP '(?<=-rc\.)[0-9]+' || echo "0")
+                      # Extract the RC number using `sed` (cross-platform compatibility)
+                      current_rc_number=$(echo "$latest_rc_tag" | sed -E 's/.*-rc\.([0-9]+)/\1/')
                       rc_number=$((current_rc_number + 1))
-                      new_version="$latest_stable_tag-rc.$rc_number"
+                      new_version="${latest_stable_tag}-rc.${rc_number}"
                   else
                       # No RC exists for the latest stable version, start with rc.1
-                      new_version="$latest_stable_tag-rc.1"
+                      new_version="${latest_stable_tag}-rc.1"
                   fi
               fi
 
               prerelease="true"
               echo "New RC Version: $new_version"
           fi
-
 
           if [[ "$base_branch" == "prod" ]]; then
             latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
