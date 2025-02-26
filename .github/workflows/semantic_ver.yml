@@ -19,6 +19,35 @@ jobs:
         with:
           fetch-depth: 0 # Ensures full commit history for versioning
 
+      - name: Get PR Labels
+        id: get_labels
+        run: |
+          PR_LABELS=$(jq -r '[.pull_request.labels[].name] | join(",")' <<< '${{ toJson(github.event.pull_request) }}' || echo "")
+          echo "PR Labels: $PR_LABELS"
+          echo "PR_LABELS=$PR_LABELS" >> $GITHUB_ENV
+
+      - name: Set Version Bump Type
+        id: bump_type
+        run: |
+          MAJOR_PATTERN="(MAJOR)" # Default
+          MINOR_PATTERN="(MINOR)"
+
+          if [[ "$PR_LABELS" =~ "major" ]]; then
+            MAJOR_PATTERN=".*" # Match everything, forcing a major bump
+            echo "Detected 'major' label → Forcing Major Version Increment"
+          elif [[ "$PR_LABELS" =~ "minor" ]]; then
+            MINOR_PATTERN=".*" # Match everything, forcing a minor bump
+            echo "Detected 'minor' label → Forcing Minor Version Increment"
+          else
+            echo "No major/minor labels detected → Defaulting to patch bump"
+          fi
+
+          echo "Using Major Pattern: $MAJOR_PATTERN"
+          echo "Using Minor Pattern: $MINOR_PATTERN"
+
+          echo "MAJOR_PATTERN=$MAJOR_PATTERN" >> $GITHUB_ENV
+          echo "MINOR_PATTERN=$MINOR_PATTERN" >> $GITHUB_ENV
+
       - name: Prevent Direct Merging to Prod (Only Allowed from Staging or Hotfix)
         run: |
           base_branch="${{ github.base_ref }}"
@@ -41,9 +70,13 @@ jobs:
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "v"
-          major_pattern: "(?i)breaking change"
-          minor_pattern: "(?i)feat"
+          major_pattern: "${{ env.MAJOR_PATTERN }}"
+          minor_pattern: "${{ env.MINOR_PATTERN }}"
           version_format: "v${major}.${minor}.${patch}"
+          bump_each_commit: false
+          search_commit_body: false
+          enable_prerelease_mode: true
+          debug: true # Enables logging
 
       - name: Determine Version Type
         id: determine_version
