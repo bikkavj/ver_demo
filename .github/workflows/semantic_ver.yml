@@ -22,9 +22,13 @@ jobs:
       - name: Get PR Labels
         id: get_labels
         run: |
-          PR_LABELS=$(jq -r '[.pull_request.labels[].name] | join(",")' <<< '${{ toJson(github.event.pull_request) }}' || echo "")
+          PR_LABELS=$(jq -r '.pull_request.labels | map(.name) | join(",") // "none"' <<< '${{ toJson(github.event.pull_request) }}')
           echo "PR Labels: $PR_LABELS"
           echo "PR_LABELS=$PR_LABELS" >> $GITHUB_ENV
+
+      - name: Debug GitHub Event
+        run: echo '${{ toJson(github.event) }}' 
+
 
       - name: Set Version Bump Type
         id: bump_type
