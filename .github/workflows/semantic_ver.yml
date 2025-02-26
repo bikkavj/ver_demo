@@ -115,7 +115,6 @@ jobs:
             else
               patch=$((patch + 1))
             fi
-
             new_version="v$major.$minor.$patch"
             prerelease="false"
           fi
