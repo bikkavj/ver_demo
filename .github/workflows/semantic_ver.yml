@@ -101,13 +101,16 @@ jobs:
             patch=$(echo "$last_version" | cut -d. -f3)
 
             if echo "$pr_title" | grep -q "(MAJOR)" || echo "$pr_body" | grep -q "(MAJOR)"; then
+              echo "Bumping major..."
               major=$((major + 1))
               minor=0
               patch=0
             elif echo "$pr_title" | grep -q "(MINOR)" || echo "$pr_body" | grep -q "(MINOR)"; then
+              echo "Bumping minor..."
               minor=$((minor + 1))
               patch=0
             else
+              echo "Bumping patch..."
               patch=$((patch + 1))
             fi
             new_version="v$major.$minor.$patch"
