@@ -173,55 +173,15 @@ jobs:
           fromTag: ${{ env.PREVIOUS_TAG }}
           toTag: ${{ env.NEW_VERSION }}
           fetchViaCommits: true
-          configurationJson: |
-            {
-              "template": "## Changelog\n\n{{CHANGELOG}}",
-              "categories": [
-                {
-                  "title": "📦 Last Change",
-                  "labels": []
-                }
-              ]
-            }
 
-      - name: Extract Latest PR from Changelog
+      - name: Save Changelog to File
         run: |
-          # Store the generated changelog safely
-          changelog="${{ steps.build_changelog.outputs.changelog }}"
-
-          # Check if the changelog contains actual data
-          if [[ -z "$changelog" || "$changelog" == *"{{CHANGELOG}}"* ]]; then
-            echo "No changelog found or changelog is empty. Skipping..."
-            exit 0
-          fi
-
-          # Debug: Print full changelog for verification
-          echo "Full Changelog:"
-          echo "$changelog"
-
-          # Reverse the changelog and extract the last PR entry
-          last_pr=$(echo "$changelog" | tac | grep -m 1 "^- PR:" || echo "No PR found")
-
-          # If no PR is found, handle gracefully
-          if [[ "$last_pr" == "No PR found" ]]; then
-            echo "No valid PRs found. Skipping..."
-            exit 0
-          fi
-
-          # Write filtered changelog to a file
-          echo -e "## Changelog\n\n$last_pr" > release_notes.md
-
-          # Store the filtered changelog as an environment variable
-          echo "CHANGELOG=$(cat release_notes.md)" >> $GITHUB_ENV
+          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n\n${{ steps.build_changelog.outputs.changelog }}" > release_notes.md
 
       - name: Debug Filtered Changelog
         run: |
           echo "Filtered Changelog:"
           cat release_notes.md
-
-      - name: Save Changelog to File
-        run: |
-          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n\n${{ steps.build_changelog.outputs.changelog }}" > release_notes.md
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
