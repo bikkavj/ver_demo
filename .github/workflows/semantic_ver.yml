@@ -173,6 +173,50 @@ jobs:
           fromTag: ${{ env.PREVIOUS_TAG }}
           toTag: ${{ env.NEW_VERSION }}
           fetchViaCommits: true
+          configurationJson: |
+            {
+              "template": "## Changelog\n\n{{CHANGELOG}}",
+              "categories": [
+                {
+                  "title": "📦 Last Change",
+                  "labels": []
+                }
+              ]
+            }
+
+      - name: Extract Latest PR from Changelog
+        run: |
+          # Store the generated changelog
+          changelog="${{ steps.build_changelog.outputs.changelog }}"
+
+          # Ensure the changelog is not empty
+          if [[ -z "$changelog" ]]; then
+            echo "No changelog found. Skipping..."
+            exit 0
+          fi
+
+          # Debug: Print full changelog for verification
+          echo "Full Changelog:"
+          echo "$changelog"
+
+          # Extract the first PR entry (assuming PRs start with "- PR:")
+          last_pr=$(echo "$changelog" | tac | grep -m 1 "^- PR:" || echo "No PR found")
+
+          # If no PR is found, handle gracefully
+          if [[ -z "$last_pr" ]]; then
+            last_pr="No PR found in changelog."
+          fi
+
+          # Write filtered changelog to a file
+          echo -e "## Changelog\n\n$last_pr" > release_notes.md
+
+          # Store the filtered changelog as an environment variable
+          echo "CHANGELOG=$(cat release_notes.md)" >> $GITHUB_ENV
+
+      - name: Debug Filtered Changelog
+        run: |
+          echo "Filtered Changelog:"
+          cat release_notes.md
 
       - name: Save Changelog to File
         run: |
