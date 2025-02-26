@@ -58,7 +58,6 @@ jobs:
           new_version="${{ steps.versioning.outputs.version }}"
 
           echo "Base Branch: $base_branch"
-          echo "Base Version: $new_version"
           echo "PR_TITLE: $pr_title"
           echo "PR_BODY: $pr_body"
 
@@ -136,8 +135,8 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/bikkavj/ver_demo.git
-          git tag $NEW_VERSION
-          git push origin $NEW_VERSION
+          git tag ${{ env.NEW_VERSION }}
+          git push origin ${{ env.NEW_VERSION }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -146,8 +145,8 @@ jobs:
           NEW_VERSION: ${{ env.NEW_VERSION }}
           PRERELEASE: ${{ env.PRERELEASE }}
         with:
-          tag_name: $NEW_VERSION
-          release_name: Release $NEW_VERSION
-          body: "Automated release for $NEW_VERSION"
-          prerelease: $PRERELEASE
+          tag_name: ${{ env.NEW_VERSION }}
+          release_name: Release ${{ env.NEW_VERSION }}
+          body: "Automated release for ${{ env.NEW_VERSION }}"
+          prerelease: ${{ env.PRERELEASE }}
 
