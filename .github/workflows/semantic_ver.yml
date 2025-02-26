@@ -175,9 +175,9 @@ jobs:
           fetchViaCommits: true
 
       - name: Save Changelog to File
-        run: |
-          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n\n${{ steps.build_changelog.outputs.changelog }}" > release_notes.md
-          echo "${{ steps.build_changelog.outputs.changelog }}" | sed '/^[[:space:]]*$/d' | awk '/^- /{p=$0; getline; print p "\n" $0}' | tail -n 2 >> release_notes.md
+         run: |
+          echo -e "Automated release for ${{ env.NEW_VERSION }}\n\n## Changelog\n## Uncategorized\n" > release_filter_notes.md
+          echo "${{ steps.build_changelog.outputs.changelog }}" | sed '/^[[:space:]]*$/d' | awk '/^- /{p=$0; getline; print p "\n" $0}' | tail -n 2 >> release_filter_notes.md
 
       - name: Debug Filtered Changelog
         run: |
@@ -194,6 +194,6 @@ jobs:
         with:
           tag_name: ${{ env.NEW_VERSION }}
           release_name: Release ${{ env.NEW_VERSION }}
-          body_path: release_notes.md
+          body_path: release_filter_notes.md
           prerelease: ${{ env.PRERELEASE }}
 
