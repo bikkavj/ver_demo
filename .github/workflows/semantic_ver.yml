@@ -42,27 +42,13 @@ jobs:
           git fetch --tags --force
           git tag --list --sort=-v:refname  # Debugging: Show all tags sorted by version
 
-
-      - name: Get Semantic Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)"
-          version_format: 'v${major}.${minor}.${patch}-rc.${increment}'
-          bump_each_commit: false
-          search_commit_body: true
-          enable_prerelease_mode: ${{ github.event.pull_request.base.ref != 'prod' }}
-
-
-      - name: Determine Version Type
+      - name: Determine Semantic Version 
         run: |
           set -e  # Exit if any command fails
           base_branch="${{ github.event.pull_request.base.ref }}"
           pr_title="${{ github.event.pull_request.title }}"
           pr_body="${{ github.event.pull_request.body }}"
-          new_version="${{ steps.versioning.outputs.version }}"
+          #new_version="${{ steps.versioning.outputs.version }}"
 
           echo "Base Branch: $base_branch"
           echo "PR_TITLE: $pr_title"
