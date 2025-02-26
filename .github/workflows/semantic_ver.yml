@@ -65,30 +65,33 @@ jobs:
           prerelease="false"
 
           if [[ "$base_branch" == "staging" ]]; then
-              # Get the latest RC version if it exists
-              latest_rc_tag=$(git tag --list "v*-rc.*" | sort -V | tail -n 1)
-              
-              if [[ -n "$latest_rc_tag" ]]; then
-                  # If an RC exists, extract current RC number and increment
-                  current_rc_number=$(echo "$latest_rc_tag" | grep -oP '(?<=-rc)\d+' || echo "0")
-                  rc_number=$((current_rc_number + 1))
-                  
-                  # Update the new version with incremented RC number
-                  new_version=$(echo "$latest_rc_tag" | sed -E "s/-rc[0-9]+/-rc$rc_number/")
+              echo "Generating RC version..."
+              git fetch --tags  # Ensure all tags are fetched
+
+              # Get the latest stable version (excluding RC versions)
+              latest_stable_tag=$(git tag --list "v*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -rV | head -n 1)
+              echo "latest_stable_version: $latest_stable_tag"
+
+              if [[ -z "$latest_stable_tag" ]]; then
+                  # No previous stable versions, start fresh
+                  new_version="v1.0.0-rc.1"
               else
-                  # No RC exists, start from latest stable version
-                  latest_stable_tag=$(git tag --list "v*" | sort -V | tail -n 1)
-                  
-                  if [[ -z "$latest_stable_tag" ]]; then
-                      # No tags exist, start fresh
-                      new_version="v1.0.0-rc.1"
+                  # Find the latest RC version for this stable version
+                  latest_rc_tag=$(git tag --list | grep -E "^${latest_stable_tag}-rc.[0-9]+" | sort -V | tail -n 1)
+
+                  if [[ -n "$latest_rc_tag" ]]; then
+                      # Extract the RC number using `sed` (cross-platform compatibility)
+                      current_rc_number=$(echo "$latest_rc_tag" | sed -E 's/.*-rc\.([0-9]+)/\1/')
+                      rc_number=$((current_rc_number + 1))
+                      new_version="${latest_stable_tag}-rc.${rc_number}"
                   else
-                      # Use latest stable version and append `-rc.1`
-                      new_version="$latest_stable_tag-rc.1"
+                      # No RC exists for the latest stable version, start with rc.1
+                      new_version="${latest_stable_tag}-rc.1"
                   fi
               fi
-
+              #setting prerelease true
               prerelease="true"
+              echo "New RC Version: $new_version"
           fi
 
           if [[ "$base_branch" == "prod" ]]; then
@@ -134,6 +137,7 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/bikkavj/ver_demo.git
           git tag $NEW_VERSION
           git push origin $NEW_VERSION
+
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
