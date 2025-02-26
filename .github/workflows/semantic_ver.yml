@@ -37,25 +37,18 @@ jobs:
             exit 1
           fi
 
-      - name: Get Semantic Version
-        id: versioning
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "v"
-          major_pattern: "(MAJOR)"
-          minor_pattern: "(MINOR)"
-          version_format: 'v${major}.${minor}.${patch}-rc.${increment}'
-          bump_each_commit: false
-          search_commit_body: true
-          enable_prerelease_mode: ${{ github.event.pull_request.base.ref != 'prod' }}
+      - name: Fetch Latest Tags
+        run: |
+          git fetch --tags --force
+          git tag --list --sort=-v:refname  # Debugging: Show all tags sorted by version
 
-      - name: Determine Version Type
+      - name: Determine Semantic Version 
         run: |
           set -e  # Exit if any command fails
           base_branch="${{ github.event.pull_request.base.ref }}"
           pr_title="${{ github.event.pull_request.title }}"
           pr_body="${{ github.event.pull_request.body }}"
-          new_version="${{ steps.versioning.outputs.version }}"
+          #new_version="${{ steps.versioning.outputs.version }}"
 
           echo "Base Branch: $base_branch"
           echo "PR_TITLE: $pr_title"
@@ -77,6 +70,7 @@ jobs:
               else
                   # Find the latest RC version for this stable version
                   latest_rc_tag=$(git tag --list | grep -E "^${latest_stable_tag}-rc.[0-9]+" | sort -V | tail -n 1)
+                  echo "latest RC Version: $latest_rc_tag"
 
                   if [[ -n "$latest_rc_tag" ]]; then
                       # Extract the RC number using `sed` (cross-platform compatibility)
