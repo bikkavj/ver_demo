@@ -48,7 +48,7 @@ jobs:
           base_branch="${{ github.event.pull_request.base.ref }}"
           pr_title="${{ github.event.pull_request.title }}"
           pr_body="${{ github.event.pull_request.body }}"
-          new_version="${{ steps.versioning.outputs.version }}"
+          #new_version="${{ steps.versioning.outputs.version }}"
 
           echo "Base Branch: $base_branch"
           echo "PR_TITLE: $pr_title"
