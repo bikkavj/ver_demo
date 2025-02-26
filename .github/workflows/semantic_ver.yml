@@ -119,7 +119,6 @@ jobs:
             fi
             new_version="v$major.$minor.$patch"
             prerelease="false"
-            echo "New stable Version: $new_version"
           fi
 
           echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
